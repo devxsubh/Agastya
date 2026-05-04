@@ -16,3 +16,11 @@ agastya_env/
 phase2_results/
 results/phase2/models/*.pt
 .DS_Store
+.EasyOCR/
+results/phase3/models/*.pkl
+# Large training artifacts
+results/phase2/models/*.pt
+results/phase3/models/*.pt
+results/phase3/models/*.npz
+results/phase3/*.pkl
+results/phase3/*.npz

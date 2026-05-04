@@ -7,9 +7,11 @@
 - [Problem](#problem)
 - [Approach (Phase 1)](#approach-phase-1)
 - [Approach (Phase 2)](#approach-phase-2)
+- [Approach (Phase 3)](#approach-phase-3)
 - [Results (high level)](#results-high-level)
 - [Folder structure](#folder-structure)
 - [Usage (Phase 2)](#usage-phase-2)
+- [Usage (Phase 3)](#usage-phase-3)
 - [Reproducible setup](#reproducible-setup)
 - [Development practices](#development-practices)
 - [Team](#team)
@@ -56,6 +58,21 @@ Phase 2 implementation details and experiments are found in `src/phase2/` and `n
 
 ---
 
+## Approach (Phase 3)
+
+| Layer | Choice | Rationale |
+|--------|--------|-----------|
+| **Hybrid stack** | Legal-BERT + Bayesian Network + Interface Layer | Combines strong clause semantics with explicit probabilistic reasoning over contract risk. |
+| **OCR ingestion** | Tiered extractor (`pdfplumber` first, EasyOCR fallback) | Keeps digital PDFs fast/accurate while still supporting scanned contracts and images. |
+| **Interface layer** | Evidence encoder + confidence mapper + cross-clause feature extractor | Converts neural outputs into hard and soft evidence for Bayesian inference. |
+| **Probabilistic model** | 8-node Bayesian Network with EM refinement | Encodes legal priors, then adapts CPTs from training evidence. |
+| **Evaluation** | Ablation: ML-only vs DL-only vs Hybrid | Measures whether neuro-symbolic fusion provides gains over standalone models. |
+| **Delivery surface** | Streamlit app (`app/streamlit_app.py`) | Provides interactive upload-to-risk-analysis workflow and explainable traces. |
+
+Phase 3 implementation details and experiments are found in `src/phase3/`, `notebooks/Phase_3/`, and `reports/phase3/`.
+
+---
+
 ## Results (high level)
 
 Work to date is **notebook-driven** and intended to be **auditable** (tables, plots, and narrative in each part).
@@ -76,6 +93,15 @@ The transition to deep learning yielded a significant performance jump by levera
 - **Fine-Tuning** ([`07_Training_Bert.ipynb`](notebooks/Phase_2/07_Training_Bert.ipynb)): Achieved convergence with `Legal-BERT` using 128-token windows and document-level splits.
 - **Evaluation** ([`08_evaluation.ipynb`](notebooks/Phase_2/08_evaluation.ipynb)): Detailed per-class analysis (refer to `phase2_results/results.json` and the `confusion_matrix.png`).
 - **Interpretability** ([`09_interpretability.ipynb`](notebooks/Phase_2/09_interpretability.ipynb)): Initial exploration of attention weights and feature salience for legal entities.
+
+### Phase 3: Hybrid Reasoning (Neuro-Symbolic)
+Phase 3 introduces an end-to-end hybrid pipeline integrating OCR, Legal-BERT outputs, and Bayesian risk inference.
+
+- **Bayesian Network + CPT setup** ([`10_bn_structure_and_cpts.ipynb`](notebooks/Phase_3/10_bn_structure_and_cpts.ipynb)): Defines the graph structure and seed/refined CPT behavior.
+- **Hybrid pipeline demo** ([`11_hybrid_pipeline_demo.ipynb`](notebooks/Phase_3/11_hybrid_pipeline_demo.ipynb)): Demonstrates evidence encoding, posterior risk inference, and traceable outputs.
+- **Ablation study** ([`12_ablation_study.ipynb`](notebooks/Phase_3/12_ablation_study.ipynb)): Compares ML-only, DL-only, and Hybrid configurations.
+- **Interpretability report** ([`13_interpretability_report.ipynb`](notebooks/Phase_3/13_interpretability_report.ipynb)): Summarizes posterior behavior and cross-phase progression.
+- **Artifacts**: Metrics and diagnostics are tracked in `reports/phase3/` (CSV/JSON) and models/checkpoints in `results/phase3/`.
 
 ---
 
@@ -202,12 +228,46 @@ The **`notebooks/Phase_2/`** directory contains the full developmental narrative
 
 ---
 
+## Usage (Phase 3)
+
+### 1) Train / refresh Phase 3 components
+
+```bash
+python -m src.phase3.risk_bert_train_cli
+python -m src.phase3.bayesian.train_cli
+python -m src.phase3.tier3_train_cli
+```
+
+### 2) Run hybrid evaluation and ablations
+
+```bash
+python -m src.phase3.hybrid_eval_cli
+python -m src.phase3.ablation_cli
+```
+
+### 3) Launch the demo app
+
+```bash
+streamlit run app/streamlit_app.py
+```
+
+### 4) Run Phase 3 tests
+
+```bash
+pytest tests/phase3 -v
+```
+
+---
+
 ## Reproducible setup
 
 **Prerequisites**
 
 - **Python 3.10+** recommended (matches current `scikit-learn` / `pandas` stacks).
 - **Git** for version-aligned clones.
+- **Poppler** (required for PDF rasterization in Phase 3 OCR fallback):
+  - macOS: `brew install poppler`
+  - Ubuntu/Debian: `sudo apt install poppler-utils`
 
 **Steps**
 
@@ -253,4 +313,4 @@ Analysis uses the **Contract Understanding Atticus Dataset (CUAD)**. Cite the da
 
 - **Phase 1 (Complete):** Classical ML baselines (SVM/NB) on CUAD.
 - **Phase 2 (Complete):** Deep Learning transition with Domain-Specific Transformers (Legal-BERT).
-- **Phase 3 (Next):** Hybrid reasoning models combining structured extraction with Large Language Model (LLM) verification and risk explanation.
+- **Phase 3 (In Progress):** Hybrid reasoning pipeline with OCR, interface-layer evidence fusion, Bayesian risk inference, and Streamlit-based analysis UI.
