@@ -1,4 +1,4 @@
-"""CLI entrypoint for training the Phase 3 BN with EM."""
+"""CLI entrypoint for training the Phase 3 BN."""
 
 from __future__ import annotations
 
@@ -25,12 +25,23 @@ def main() -> None:
         default=30,
         help="EM iterations",
     )
+    parser.add_argument(
+        "--use-seed-cpt",
+        action="store_true",
+        help="Use hand-crafted seed CPTs and skip EM updates.",
+    )
+    parser.add_argument(
+        "--use-em",
+        action="store_true",
+        help="Enable EM updates (recommended only with balanced risk labels).",
+    )
     args = parser.parse_args()
 
     model, bn_train_df = train_bn_from_phase2_processed(
         train_csv_path=args.train_csv,
         output_model_path=args.out_model,
         n_iter=args.n_iter,
+        use_seed_cpt=(args.use_seed_cpt or not args.use_em),
     )
     print(f"Trained rows: {len(bn_train_df)}")
     print(f"Output model: {args.out_model}")

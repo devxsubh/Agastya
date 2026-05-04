@@ -33,14 +33,18 @@ def _get_reader():
     return _OCR_READER
 
 
-def extract_text(file_input: BinaryIO) -> str:
+def extract_text(file_input: BinaryIO, suffix: str | None = None) -> str:
     """
     Universal contract text extractor.
 
     Accepts: digital PDF, scanned PDF, PNG, JPG, TXT.
     Returns: cleaned contract text.
     """
-    suffix = Path(getattr(file_input, "name", "")).suffix.lower()
+    if suffix is None:
+        suffix = Path(getattr(file_input, "name", "")).suffix.lower()
+    else:
+        suffix = suffix.lower()
+
     raw_bytes = file_input.read()
 
     if suffix == ".txt":

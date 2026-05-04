@@ -136,7 +136,7 @@ def absence_to_virtual(
     (default 0.85) and globally softened by ``scale``. Set scale=0 to disable.
 
     NOTE: ordering is ``[Absent, Present]``. The state-aware
-    ``build_virtual_cpds`` re-orders to match the BN model's state vector.
+    ``build_virtual_evidence`` re-orders to match the BN model's state vector.
     """
     if scale is None:
         scale = load_absence_ve_scale()

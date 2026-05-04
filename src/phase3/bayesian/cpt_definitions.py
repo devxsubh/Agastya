@@ -63,8 +63,12 @@ def get_seed_cpts():
     )
     cpt_d1 = TabularCPD(
         "Cross_Clause_Conflict",
-        2,
-        [[0.80, 0.92, 0.50, 0.68, 0.45, 0.62, 0.15, 0.30], [0.20, 0.08, 0.50, 0.32, 0.55, 0.38, 0.85, 0.70]],
+        3,
+        [
+            [0.65, 0.75, 0.30, 0.45, 0.25, 0.40, 0.03, 0.10],  # Conflict
+            [0.25, 0.18, 0.50, 0.42, 0.50, 0.42, 0.17, 0.25],  # Partial
+            [0.10, 0.07, 0.20, 0.13, 0.25, 0.18, 0.80, 0.65],  # No_Conflict
+        ],
         evidence=[
             "Payment_Or_Termination_Risky",
             "Liability_Or_Confidentiality_Risky",
@@ -72,7 +76,7 @@ def get_seed_cpts():
         ],
         evidence_card=[2, 2, 2],
         state_names={
-            "Cross_Clause_Conflict": ["Conflict", "No_Conflict"],
+            "Cross_Clause_Conflict": ["Conflict", "Partial", "No_Conflict"],
             "Payment_Or_Termination_Risky": ["Risky", "Not_Risky"],
             "Liability_Or_Confidentiality_Risky": ["Risky", "Not_Risky"],
             "Has_Dispute_Resolution_Clause": ["Present", "Absent"],
@@ -81,12 +85,12 @@ def get_seed_cpts():
     cpt_f1 = TabularCPD(
         "Contract_Risk_Level",
         3,
-        [[0.05, 0.55], [0.20, 0.35], [0.75, 0.10]],
+        [[0.05, 0.20, 0.70], [0.20, 0.65, 0.25], [0.75, 0.15, 0.05]],
         evidence=["Cross_Clause_Conflict"],
-        evidence_card=[2],
+        evidence_card=[3],
         state_names={
             "Contract_Risk_Level": ["Low", "Medium", "High"],
-            "Cross_Clause_Conflict": ["Conflict", "No_Conflict"],
+            "Cross_Clause_Conflict": ["Conflict", "Partial", "No_Conflict"],
         },
     )
     return [

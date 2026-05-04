@@ -14,8 +14,6 @@ Pipeline:
        with bounded updates, oscillation/delta abort, max 2 iterations
     -> Smart Report (risk + clause + conflict + top-3 prior-corrected factors)
     -> Distribution-shift guard (KS distance vs val ECDF)
-
-risk_bert is not invoked here — it is only used by the DL_Only ablation.
 """
 
 from __future__ import annotations
@@ -24,7 +22,6 @@ import bisect
 import json
 import logging
 import math
-from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable
 
@@ -43,6 +40,7 @@ from src.phase3.interface.evidence_encoder import (
 )
 from src.phase3.interface.feature_extractor import extract_cross_clause_features
 from src.phase3.interface.phase2_adapter import Phase2BertAdapter, has_phase2_artifacts
+from src.phase3.rf_reasoner import load_rf_reasoner, predict_risk
 from src.phase3.smart_report import build_smart_report
 
 logger = logging.getLogger(__name__)
@@ -67,6 +65,7 @@ _CONFLICT_CALIB_PATH = Path("results/phase3/conflict_calibration.json")
 _CONFLICT_RUNTIME_LOG = Path("results/phase3/conflict_runtime_log.jsonl")
 _CONFLICT_RUNTIME_CAP = 5000
 _KS_WARN_THRESHOLD = 0.2
+_RF_LABEL_CONFIDENCE_FLOOR = 0.11
 
 
 def boost_prob(p: float, factor: float = BOOST_FACTOR) -> float:
@@ -164,39 +163,6 @@ def _append_runtime_conflict(c: float) -> list[float]:
     return rolling
 
 
-# --- Dummy fallback predictor ------------------------------------------------
-
-@dataclass
-class DummyBertPredictor:
-    """Lightweight placeholder until a full Phase 2 inference wrapper is added."""
-
-    def predict(self, clause_text: str) -> list[dict]:
-        lowered = clause_text.lower()
-        if "payment" in lowered or "invoice" in lowered or "price" in lowered:
-            clause_type, confidence = "Payment", 0.45
-        elif "terminat" in lowered or "notice" in lowered:
-            clause_type, confidence = "Termination", 0.42
-        elif "liabil" in lowered or "indemnif" in lowered or "warrant" in lowered:
-            clause_type, confidence = "Liability", 0.40
-        elif "confidential" in lowered or "non-disclosure" in lowered or "non-compete" in lowered:
-            clause_type, confidence = "Confidentiality", 0.40
-        elif "dispute" in lowered or "governing law" in lowered or "arbitrat" in lowered:
-            clause_type, confidence = "Dispute Resolution", 0.40
-        else:
-            clause_type, confidence = "Other", 0.05
-        return [
-            {
-                "clause_text": clause_text,
-                "clause_type": clause_type,
-                "confidence": confidence,
-                "embedding": np.zeros(768, dtype=float),
-                "risk_indicators": [],
-                "logits": np.zeros(41, dtype=float),
-                "phase2_label": clause_type,
-            }
-        ]
-
-
 def _flatten_bert_outputs(raw: list) -> list[dict]:
     flat: list[dict] = []
     for item in raw:
@@ -207,14 +173,103 @@ def _flatten_bert_outputs(raw: list) -> list[dict]:
     return flat
 
 
+_SEGMENT_ANNOTATION_TEXT_CAP = 3500
+
+
+def _heuristic_clause_risk(cuad_label: str) -> str:
+    """Visual-only tier for UI markup (not the RF contract risk).
+
+    Maps prominent CUAD-style labels to Low / Medium / High *clause concern*
+    using lightweight keyword hooks — same spirit as the React ClauseViewer.
+    """
+    l = (cuad_label or "").lower()
+    high_kw = (
+        "cap on liability",
+        "uncapped",
+        "non-compete",
+        "liquidated damages",
+        "anti-assignment",
+        "change of control",
+        "ip ownership",
+        "irrevocable",
+        "joint ip",
+        "source code escrow",
+        "termination for convenience",
+        "third party beneficiary",
+        "most favored nation",
+        "non-transferable license",
+        "non-solicit",
+        "non-disparagement",
+        "insurance",
+        "exclusivity",
+        "minimum commitment",
+        "revenue",
+        "profit sharing",
+        "price restriction",
+        "renewal term",
+        "expiration date",
+        "notice period",
+        "post-termination",
+        "affiliate license",
+        "license grant",
+        "warranty duration",
+        "audit rights",
+        "covenant not to sue",
+        "volume restriction",
+        "unlimited/",
+        "rofr",
+        "rofo",
+        "rofn",
+    )
+    medium_kw = (
+        "governing law",
+        "effective date",
+        "agreement date",
+        "document name",
+        "parties",
+    )
+    if any(k in l for k in high_kw):
+        return "High"
+    if any(k in l for k in medium_kw):
+        return "Medium"
+    return "Low"
+
+
+def _build_segment_annotations(
+    clauses: list[str],
+    raw_outputs: list,
+) -> list[dict]:
+    rows: list[dict] = []
+    for idx, (clause, preds) in enumerate(zip(clauses, raw_outputs)):
+        top = preds[0] if preds else {}
+        lab = str(top.get("phase2_label", "Unknown"))
+        ct = str(top.get("clause_type", ""))
+        rows.append({
+            "segment_index": idx,
+            "text": (clause or "")[:_SEGMENT_ANNOTATION_TEXT_CAP],
+            "phase2_label": lab,
+            "mapped_bucket": ct if ct else "Other",
+            "confidence": float(top.get("confidence", 0.0)),
+            "clause_risk": _heuristic_clause_risk(lab),
+        })
+    return rows
+
+
 # --- Pipeline -----------------------------------------------------------------
 
 class AgastyaHybridPipeline:
-    """Orchestrates LoRA Legal-BERT + BN with bidirectional feedback loop."""
+    """Orchestrates LoRA Legal-BERT + BN with bidirectional feedback loop.
+
+    This pipeline is strict by design: it requires a valid Phase 2 predictor
+    (explicitly passed or loaded from artifacts) and never falls back to a
+    dummy heuristic model.
+    """
 
     def __init__(
         self,
-        bn_model_path: str,
+        bn_model_path: str | None = None,
+        rf_model_path: str | None = "results/phase3/rf_reasoner.pkl",
+        rf_label_confidence_floor: float = _RF_LABEL_CONFIDENCE_FLOOR,
         bert_predictor: Callable | None = None,
         bert_checkpoint_path: str | None = None,
         label_map_path: str = "results/phase2/label2id.json",
@@ -227,28 +282,47 @@ class AgastyaHybridPipeline:
             label_map_path=label_map_path,
             adapter_path=adapter_path,
         )
-        self.bn = load_model(bn_model_path)
-        self.bp_engine = BeliefPropagation(self.bn)
+        self.rf = None
+        self.bn = None
+        self.bp_engine = None
+        self.rf_label_confidence_floor = float(rf_label_confidence_floor)
+        if rf_model_path is not None and Path(rf_model_path).exists():
+            self.rf = load_rf_reasoner(rf_model_path)
+            self.reasoner_backend = "rf"
+        else:
+            if bn_model_path is None:
+                raise ValueError(
+                    "Either rf_model_path (existing file) or bn_model_path must be provided."
+                )
+            self.bn = load_model(bn_model_path)
+            self.bp_engine = BeliefPropagation(self.bn)
+            self.reasoner_backend = "bn"
 
         # Calibration state.
-        if load_calibration:
+        if self.reasoner_backend == "bn" and load_calibration:
             self.thresholds = load_thresholds()
             self.alpha_map = load_alpha_map()
             self.absence_ve_scale = load_absence_ve_scale()
-        else:
+        elif self.reasoner_backend == "bn":
             from src.phase3.interface.evidence_encoder import (
                 ALPHA_DEFAULTS, ABSENCE_VE_SCALE_DEFAULT, THRESHOLD_DEFAULTS,
             )
             self.thresholds = dict(THRESHOLD_DEFAULTS)
             self.alpha_map = dict(ALPHA_DEFAULTS)
             self.absence_ve_scale = ABSENCE_VE_SCALE_DEFAULT
+        else:
+            self.thresholds = {}
+            self.alpha_map = {}
+            self.absence_ve_scale = 1.0
 
-        feedback_cfg = _load_feedback_config() if load_calibration else {}
+        feedback_cfg = _load_feedback_config() if load_calibration and self.reasoner_backend == "bn" else {}
         self.entropy_gate = float(feedback_cfg.get("entropy_gate", ENTROPY_GATE_DEFAULT))
 
-        self.sorted_conflict_calib = _load_conflict_calibration() if load_calibration else []
+        self.sorted_conflict_calib = (
+            _load_conflict_calibration() if load_calibration and self.reasoner_backend == "bn" else []
+        )
 
-        self._priors = self._compute_priors_once()
+        self._priors = self._compute_priors_once() if self.reasoner_backend == "bn" else {}
 
     def set_runtime_overrides(
         self,
@@ -272,18 +346,21 @@ class AgastyaHybridPipeline:
         label_map_path: str,
         adapter_path: str | None,
     ):
-        if has_phase2_artifacts(bert_checkpoint_path, label_map_path, adapter_path):
-            try:
-                return Phase2BertAdapter(
-                    checkpoint_path=bert_checkpoint_path,
-                    label_map_path=label_map_path,
-                    adapter_path=adapter_path,
-                )
-            except Exception as exc:
-                logger.warning("Phase2BertAdapter init failed (%s); falling back to dummy.", exc)
-                return DummyBertPredictor()
-        logger.info("Phase 2 artifacts missing; using DummyBertPredictor.")
-        return DummyBertPredictor()
+        if not has_phase2_artifacts(bert_checkpoint_path, label_map_path, adapter_path):
+            raise FileNotFoundError(
+                "Phase 2 artifacts missing. Provide a valid adapter/checkpoint and label map; "
+                "dummy fallback is disabled."
+            )
+        try:
+            return Phase2BertAdapter(
+                checkpoint_path=bert_checkpoint_path,
+                label_map_path=label_map_path,
+                adapter_path=adapter_path,
+            )
+        except Exception as exc:
+            raise RuntimeError(
+                "Failed to initialize Phase2BertAdapter. Dummy fallback is disabled."
+            ) from exc
 
     # ---- Priors (cached) -----------------------------------------------------
 
@@ -433,10 +510,50 @@ class AgastyaHybridPipeline:
 
     # ---- Main entry ----------------------------------------------------------
 
-    def predict(self, contract_text: str) -> dict:
-        clauses = split_clauses(contract_text)
+    def _predict_from_clauses(self, clauses: list[str]) -> dict:
         raw_outputs = [self.bert.predict(clause) for clause in clauses]
         bert_outputs = _flatten_bert_outputs(raw_outputs)
+        segment_annotations = _build_segment_annotations(clauses, raw_outputs)
+
+        if self.reasoner_backend == "rf":
+            known_labels = set(self.rf.get("feature_labels", []))
+            present_labels = [
+                str(output.get("phase2_label", "")).strip()
+                for output in bert_outputs
+                if float(output.get("confidence", 0.0)) >= self.rf_label_confidence_floor
+                and str(output.get("phase2_label", "")).strip() in known_labels
+            ]
+            # Guard against empty vectors when no known label crosses the floor.
+            if not present_labels:
+                best_known = sorted(
+                    (
+                        output for output in bert_outputs
+                        if str(output.get("phase2_label", "")).strip() in known_labels
+                    ),
+                    key=lambda output: float(output.get("confidence", 0.0)),
+                    reverse=True,
+                )
+                if best_known:
+                    present_labels.append(str(best_known[0].get("phase2_label", "")).strip())
+            rf_result = predict_risk(self.rf, present_labels)
+            return {
+                "risk_level": rf_result["risk_level"],
+                "risk_probabilities": rf_result["probabilities"],
+                "clause_evidence": {label: f"Count: {present_labels.count(label)}" for label in sorted(set(present_labels))},
+                "initial_clause_evidence": {label: f"Count: {present_labels.count(label)}" for label in sorted(set(present_labels))},
+                "conflict_signal": None,
+                "calibrated_conflict_signal": None,
+                "bert_details": bert_outputs,
+                "bn_trace": "",
+                "virtual_evidence": {},
+                "feedback_loop": {"iteration_trace": [], "applied": False},
+                "encoder_payload": {},
+                "smart_report": None,
+                "calibration_warning": None,
+                "reasoner": "rf",
+                "feature_vector": rf_result["feature_vector"],
+                "segment_annotations": segment_annotations,
+            }
 
         encoder_payload = encode_evidence(
             bert_outputs,
@@ -519,7 +636,16 @@ class AgastyaHybridPipeline:
             "encoder_payload": encoder_payload,
             "smart_report": smart_report,
             "calibration_warning": calibration_warning,
+            "segment_annotations": segment_annotations,
         }
+
+    def predict(self, contract_text: str) -> dict:
+        clauses = split_clauses(contract_text)
+        return self._predict_from_clauses(clauses)
+
+    def predict_from_clauses(self, clauses: list[str]) -> dict:
+        """Run inference directly on pre-segmented clause texts."""
+        return self._predict_from_clauses(clauses)
 
     # ---- Internal helpers ----------------------------------------------------
 

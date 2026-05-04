@@ -1,4 +1,4 @@
-"""Phase 3 interface layer between BERT and Bayesian reasoning."""
+"""Phase 3 interface layer between BERT predictions and RF reasoning."""
 
 from .confidence_mapper import map_confidence_to_virtual_evidence
 from .evidence_encoder import CLAUSE_MAP, encode_evidence

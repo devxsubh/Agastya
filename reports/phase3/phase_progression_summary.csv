@@ -1,4 +1,5 @@
 Phase,Core Model,Task,Macro-F1,Strength,MetricStatus
 Phase 1,LinearSVC + TF-IDF,Per-clause type (41 CUAD categories),0.7187,"Transparent, interpretable baseline",reported
-Phase 2,Legal-BERT (nlpaueb/legal-bert-base-uncased),Per-clause type (41 CUAD categories),0.7463207023622066,Context-aware clause encoding (+0.027 vs Phase 1),reported
-Phase 3,Legal-BERT + Bayesian Network (pgmpy),"Contract-level risk (Low/Med/High, n=51 contracts)",0.5792663476874004,Neuro-symbolic reasoning + probabilistic risk traceability,from_hybrid_eval_artifact
+Phase 2,Legal-BERT (nlpaueb/legal-bert-base-uncased),Per-clause type (41 CUAD categories),0.7586199555419356,"Retrained intensive LoRA (+0.040 vs Phase 1 clause Macro-F1)",reported
+Phase 3 (Hybrid v1 DEPRECATED),Legal-BERT + BN (pgmpy) FAILED,Contract risk (Low/Med/High) — CPT evidence starvation,0.159,BN approach insufficient with only 5 clause nodes,deprecated_bn
+Phase 3 (Hybrid v2 PRIMARY),Legal-BERT + Random Forest (41 labels),"Contract risk (Low/Med/High, n=51 contracts)",0.8658933658933657,Encoder refresh + RF reasoner — metrics from hybrid_eval.json,rf_primary

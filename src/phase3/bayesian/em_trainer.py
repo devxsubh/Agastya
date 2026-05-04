@@ -12,6 +12,8 @@ from pgmpy.models import BayesianNetwork
 from src.phase3.bayesian.cpt_definitions import get_seed_cpts
 from src.phase3.bayesian.network import build_network
 
+USE_SEED_CPT = True  # set False only after you have balanced training data
+
 
 # Expanded label sets — aligned with phase2_adapter._PHASE2_TO_PHASE3
 # and hybrid_eval._RISKY_LABELS. Covers 26 of 41 CUAD labels.
@@ -169,17 +171,22 @@ def train_bn_from_phase2_processed(
     train_csv_path: str = "data/processed/train.csv",
     output_model_path: str = "results/phase3/bayesian_network.pkl",
     n_iter: int = 30,
+    use_seed_cpt: bool = USE_SEED_CPT,
 ) -> tuple[BayesianNetwork, pd.DataFrame]:
     """Train BN with EM using processed Phase 2 train split and persist to disk."""
     train_df = pd.read_csv(train_csv_path)
     bn_train_df = build_bn_training_data_from_phase2_df(train_df)
 
     model = build_network()
-    model.add_cpds(*get_seed_cpts())
+    for cpt in get_seed_cpts():
+        model.add_cpds(cpt)
     if not model.check_model():
-        raise ValueError("Seed model invalid before EM training.")
+        raise ValueError("BN structure invalid")
 
-    trained = train_with_em(model, bn_train_df, n_iter=n_iter)
+    if use_seed_cpt:
+        trained = model
+    else:
+        trained = train_with_em(model, bn_train_df, n_iter=n_iter)
     out_path = Path(output_model_path)
     out_path.parent.mkdir(parents=True, exist_ok=True)
     save_model(trained, str(out_path))

@@ -1,0 +1,713 @@
+{
+  "task": "hybrid_rf_roberta_benchmark",
+  "models": [
+    "roberta-base",
+    "roberta-large"
+  ],
+  "results": [
+    {
+      "model": "roberta-base",
+      "n_contracts": 51,
+      "macro_f1": 0.15151515151515152,
+      "accuracy": 0.29411764705882354,
+      "precision": 0.09803921568627451,
+      "recall": 0.3333333333333333,
+      "labels_predicted": [
+        "Low"
+      ],
+      "per_class_report": {
+        "Low": {
+          "precision": 0.29411764705882354,
+          "recall": 1.0,
+          "f1-score": 0.45454545454545453,
+          "support": 15.0
+        },
+        "Medium": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1-score": 0.0,
+          "support": 13.0
+        },
+        "High": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1-score": 0.0,
+          "support": 23.0
+        },
+        "accuracy": 0.29411764705882354,
+        "macro avg": {
+          "precision": 0.09803921568627451,
+          "recall": 0.3333333333333333,
+          "f1-score": 0.15151515151515152,
+          "support": 51.0
+        },
+        "weighted avg": {
+          "precision": 0.08650519031141869,
+          "recall": 0.29411764705882354,
+          "f1-score": 0.13368983957219252,
+          "support": 51.0
+        }
+      },
+      "contracts": [
+        {
+          "filename": "ACCELERATEDTECHNOLOGIESHOLDINGCORP_04_24_2003-EX-10.13-JOINT VENTURE AGREEMENT.PDF",
+          "y_true": "Low",
+          "y_pred": "Low",
+          "n_present_labels": 1
+        },
+        {
+          "filename": "ADUROBIOTECH,INC_06_02_2020-EX-10.7-CONSULTING AGREEMENT.PDF",
+          "y_true": "Medium",
+          "y_pred": "Low",
+          "n_present_labels": 1
+        },
+        {
+          "filename": "AgapeAtpCorp_20191202_10-KA_EX-10.1_11911128_EX-10.1_Supply Agreement.pdf",
+          "y_true": "High",
+          "y_pred": "Low",
+          "n_present_labels": 1
+        },
+        {
+          "filename": "BIOAMBERINC_04_10_2013-EX-10.34-DEVELOPMENT AGREEMENT - First Amendment.pdf",
+          "y_true": "Low",
+          "y_pred": "Low",
+          "n_present_labels": 1
+        },
+        {
+          "filename": "BLUEHILLSBANCORP,INC_05_20_2014-EX-1.1-AGENCY AGREEMENT.PDF",
+          "y_true": "Medium",
+          "y_pred": "Low",
+          "n_present_labels": 1
+        },
+        {
+          "filename": "BUFFALOWILDWINGSINC_06_05_1998-EX-10.3-FRANCHISE AGREEMENT.PDF",
+          "y_true": "High",
+          "y_pred": "Low",
+          "n_present_labels": 1
+        },
+        {
+          "filename": "BellringBrandsInc_20190920_S-1_EX-10.12_11817081_EX-10.12_Manufacturing Agreement3.pdf",
+          "y_true": "Low",
+          "y_pred": "Low",
+          "n_present_labels": 1
+        },
+        {
+          "filename": "BizzingoInc_20120322_8-K_EX-10.17_7504499_EX-10.17_Endorsement Agreement.pdf",
+          "y_true": "High",
+          "y_pred": "Low",
+          "n_present_labels": 1
+        },
+        {
+          "filename": "CENTRACKINTERNATIONALINC_10_29_1999-EX-10.3-WEB SITE HOSTING AGREEMENT.PDF",
+          "y_true": "Medium",
+          "y_pred": "Low",
+          "n_present_labels": 1
+        },
+        {
+          "filename": "COOLTECHNOLOGIES,INC_10_25_2017-EX-10.71-Strategic Alliance Agreement.PDF",
+          "y_true": "Medium",
+          "y_pred": "Low",
+          "n_present_labels": 1
+        },
+        {
+          "filename": "CURAEGISTECHNOLOGIES,INC_05_26_2010-EX-1-CORPORATE SPONSORSHIP AGREEMENT.PDF",
+          "y_true": "Medium",
+          "y_pred": "Low",
+          "n_present_labels": 1
+        },
+        {
+          "filename": "CerenceInc_20191002_8-K_EX-10.4_11827494_EX-10.4_Intellectual Property Agreement.pdf",
+          "y_true": "High",
+          "y_pred": "Low",
+          "n_present_labels": 1
+        },
+        {
+          "filename": "DUOSTECHNOLOGIESGROUP,INC_04_21_2009-EX-10.1-STRATEGIC ALLIANCE AGREEMENT.PDF",
+          "y_true": "High",
+          "y_pred": "Low",
+          "n_present_labels": 1
+        },
+        {
+          "filename": "ENTERTAINMENTGAMINGASIAINC_02_15_2005-EX-10.5-DISTRIBUTOR AGREEMENT.PDF",
+          "y_true": "High",
+          "y_pred": "Low",
+          "n_present_labels": 1
+        },
+        {
+          "filename": "FOUNDATIONMEDICINE,INC_02_02_2015-EX-10.2-Collaboration Agreement.PDF",
+          "y_true": "High",
+          "y_pred": "Low",
+          "n_present_labels": 1
+        },
+        {
+          "filename": "GRIDIRONBIONUTRIENTS,INC_02_05_2020-EX-10.3-SUPPLY AGREEMENT.PDF",
+          "y_true": "Low",
+          "y_pred": "Low",
+          "n_present_labels": 1
+        },
+        {
+          "filename": "GSITECHNOLOGYINC_11_16_2009-EX-10.2-INTELLECTUAL PROPERTY AGREEMENT between SONY ELECTRONICS INC. and GSI TECHNOLOGY, INC..PDF",
+          "y_true": "Low",
+          "y_pred": "Low",
+          "n_present_labels": 1
+        },
+        {
+          "filename": "GluMobileInc_20070319_S-1A_EX-10.09_436630_EX-10.09_Content License Agreement2.pdf",
+          "y_true": "High",
+          "y_pred": "Low",
+          "n_present_labels": 1
+        },
+        {
+          "filename": "IGENEBIOTECHNOLOGYINC_05_13_2003-EX-1-JOINT VENTURE AGREEMENT.PDF",
+          "y_true": "Medium",
+          "y_pred": "Low",
+          "n_present_labels": 1
+        },
+        {
+          "filename": "IMAGEWARESYSTEMSINC_12_20_1999-EX-10.22-MAINTENANCE AGREEMENT.PDF",
+          "y_true": "High",
+          "y_pred": "Low",
+          "n_present_labels": 1
+        },
+        {
+          "filename": "INTERSECTENT,INC_05_11_2020-EX-10.1-SUPPLY AGREEMENT.PDF",
+          "y_true": "Medium",
+          "y_pred": "Low",
+          "n_present_labels": 1
+        },
+        {
+          "filename": "IOVANCEBIOTHERAPEUTICS,INC_08_03_2017-EX-10.1-STRATEGIC ALLIANCE AGREEMENT.PDF",
+          "y_true": "High",
+          "y_pred": "Low",
+          "n_present_labels": 1
+        },
+        {
+          "filename": "IdeanomicsInc_20160330_10-K_EX-10.26_9512211_EX-10.26_Content License Agreement.pdf",
+          "y_true": "High",
+          "y_pred": "Low",
+          "n_present_labels": 1
+        },
+        {
+          "filename": "LIGHTBRIDGECORP_11_23_2015-EX-10.26-STRATEGIC ALLIANCE AGREEMENT.PDF",
+          "y_true": "Low",
+          "y_pred": "Low",
+          "n_present_labels": 1
+        },
+        {
+          "filename": "LIMEENERGYCO_09_09_1999-EX-10-DISTRIBUTOR AGREEMENT.PDF",
+          "y_true": "High",
+          "y_pred": "Low",
+          "n_present_labels": 1
+        },
+        {
+          "filename": "MERITLIFEINSURANCECO_06_19_2020-EX-10.(XIV)-MASTER SERVICES AGREEMENT.PDF",
+          "y_true": "High",
+          "y_pred": "Low",
+          "n_present_labels": 1
+        },
+        {
+          "filename": "MSCIINC_02_28_2008-EX-10.10-.PDF",
+          "y_true": "Medium",
+          "y_pred": "Low",
+          "n_present_labels": 1
+        },
+        {
+          "filename": "ON2TECHNOLOGIES,INC_11_17_2006-EX-10.3-SUPPORT AND MAINTENANCE AGREEMENT.PDF",
+          "y_true": "Low",
+          "y_pred": "Low",
+          "n_present_labels": 1
+        },
+        {
+          "filename": "OPERALTD_04_30_2020-EX-4.14-SERVICE AGREEMENT.PDF",
+          "y_true": "Medium",
+          "y_pred": "Low",
+          "n_present_labels": 1
+        },
+        {
+          "filename": "PACIFICSYSTEMSCONTROLTECHNOLOGYINC_08_24_2000-EX-10.53-SPONSORSHIP AGREEMENT.PDF",
+          "y_true": "Low",
+          "y_pred": "Low",
+          "n_present_labels": 1
+        },
+        {
+          "filename": "PROFOUNDMEDICALCORP_08_29_2019-EX-4.5-SUPPLY AGREEMENT.PDF",
+          "y_true": "High",
+          "y_pred": "Low",
+          "n_present_labels": 1
+        },
+        {
+          "filename": "PacificapEntertainmentHoldingsInc_20051115_8-KA_EX-1.01_4300894_EX-1.01_Content License Agreement.pdf",
+          "y_true": "High",
+          "y_pred": "Low",
+          "n_present_labels": 1
+        },
+        {
+          "filename": "PareteumCorp_20081001_8-K_EX-99.1_2654808_EX-99.1_Hosting Agreement.pdf",
+          "y_true": "High",
+          "y_pred": "Low",
+          "n_present_labels": 1
+        },
+        {
+          "filename": "Principal Life Insurance Company - Broker Dealer Marketing and Servicing Agreement .PDF",
+          "y_true": "Medium",
+          "y_pred": "Low",
+          "n_present_labels": 1
+        },
+        {
+          "filename": "Quaker Chemical Corporation - NON COMPETITION AND NON SOLICITATION AGREEMENT.PDF",
+          "y_true": "Medium",
+          "y_pred": "Low",
+          "n_present_labels": 1
+        },
+        {
+          "filename": "QuantumGroupIncFl_20090120_8-K_EX-99.2_3672910_EX-99.2_Hosting Agreement.pdf",
+          "y_true": "High",
+          "y_pred": "Low",
+          "n_present_labels": 1
+        },
+        {
+          "filename": "Reinsurance Group of America, Incorporated - A&R REMARKETING  AGREEMENT.PDF",
+          "y_true": "Medium",
+          "y_pred": "Low",
+          "n_present_labels": 1
+        },
+        {
+          "filename": "SOLUTIONSVENDINGINTERNATIONAL,INC_03_31_2020-EX1A-1 UNDR AGMT-SERVICES AGREEMENT.PDF",
+          "y_true": "Low",
+          "y_pred": "Low",
+          "n_present_labels": 1
+        },
+        {
+          "filename": "STAMPSCOMINC_06_24_1999-EX-10.18-SPONSORSHIP AGREEMENT.PDF",
+          "y_true": "High",
+          "y_pred": "Low",
+          "n_present_labels": 1
+        },
+        {
+          "filename": "SalesforcecomInc_20171122_10-Q_EX-10.1_10961535_EX-10.1_Reseller Agreement.pdf",
+          "y_true": "Low",
+          "y_pred": "Low",
+          "n_present_labels": 1
+        },
+        {
+          "filename": "SmartRxSystemsInc_20180914_1-A_EX1A-6 MAT CTRCT_11351705_EX1A-6 MAT CTRCT_Distributor Agreement.pdf",
+          "y_true": "High",
+          "y_pred": "Low",
+          "n_present_labels": 1
+        },
+        {
+          "filename": "TALLGRASSENERGY,LP_02_20_2020-EX-99.26-JOINT FILING AGREEMENT.PDF",
+          "y_true": "Low",
+          "y_pred": "Low",
+          "n_present_labels": 1
+        },
+        {
+          "filename": "TRANSPHORM,INC_02_14_2020-EX-10.12(1)-JOINT VENTURE AGREEMENT.PDF",
+          "y_true": "Low",
+          "y_pred": "Low",
+          "n_present_labels": 1
+        },
+        {
+          "filename": "TheglobeComInc_19990503_S-1A_EX-10.20_5416126_EX-10.20_Co-Branding Agreement.pdf",
+          "y_true": "High",
+          "y_pred": "Low",
+          "n_present_labels": 1
+        },
+        {
+          "filename": "ThriventVariableInsuranceAccountB_20190701_N-6_EX-99.D(IV)_11720968_EX-99.D(IV)_Endorsement Agreement.pdf",
+          "y_true": "Low",
+          "y_pred": "Low",
+          "n_present_labels": 1
+        },
+        {
+          "filename": "TomOnlineInc_20060501_20-F_EX-4.46_749700_EX-4.46_Co-Branding Agreement.pdf",
+          "y_true": "High",
+          "y_pred": "Low",
+          "n_present_labels": 1
+        },
+        {
+          "filename": "VIRGINGALACTICHOLDINGS,INC_04_08_2020-EX-99.1-JOINT FILING STATEMENT.PDF",
+          "y_true": "Low",
+          "y_pred": "Low",
+          "n_present_labels": 1
+        },
+        {
+          "filename": "VIVINT SOLAR, INC. - NON-COMPETITION AGREEMENT.PDF",
+          "y_true": "Low",
+          "y_pred": "Low",
+          "n_present_labels": 1
+        },
+        {
+          "filename": "VirtuosoSurgicalInc_20191227_1-A_EX1A-6 MAT CTRCT_11933379_EX1A-6 MAT CTRCT_License Agreement.pdf",
+          "y_true": "High",
+          "y_pred": "Low",
+          "n_present_labels": 1
+        },
+        {
+          "filename": "XpresspaGroupInc_20190401_10-K_EX-10.28_11599457_EX-10.28_Marketing Agreement.pdf",
+          "y_true": "High",
+          "y_pred": "Low",
+          "n_present_labels": 1
+        },
+        {
+          "filename": "ZEBRATECHNOLOGIESCORP_04_16_2014-EX-10.1-INTELLECTUAL PROPERTY AGREEMENT.PDF",
+          "y_true": "Medium",
+          "y_pred": "Low",
+          "n_present_labels": 1
+        }
+      ]
+    },
+    {
+      "model": "roberta-large",
+      "n_contracts": 51,
+      "macro_f1": 0.15151515151515152,
+      "accuracy": 0.29411764705882354,
+      "precision": 0.09803921568627451,
+      "recall": 0.3333333333333333,
+      "labels_predicted": [
+        "Low"
+      ],
+      "per_class_report": {
+        "Low": {
+          "precision": 0.29411764705882354,
+          "recall": 1.0,
+          "f1-score": 0.45454545454545453,
+          "support": 15.0
+        },
+        "Medium": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1-score": 0.0,
+          "support": 13.0
+        },
+        "High": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1-score": 0.0,
+          "support": 23.0
+        },
+        "accuracy": 0.29411764705882354,
+        "macro avg": {
+          "precision": 0.09803921568627451,
+          "recall": 0.3333333333333333,
+          "f1-score": 0.15151515151515152,
+          "support": 51.0
+        },
+        "weighted avg": {
+          "precision": 0.08650519031141869,
+          "recall": 0.29411764705882354,
+          "f1-score": 0.13368983957219252,
+          "support": 51.0
+        }
+      },
+      "contracts": [
+        {
+          "filename": "ACCELERATEDTECHNOLOGIESHOLDINGCORP_04_24_2003-EX-10.13-JOINT VENTURE AGREEMENT.PDF",
+          "y_true": "Low",
+          "y_pred": "Low",
+          "n_present_labels": 1
+        },
+        {
+          "filename": "ADUROBIOTECH,INC_06_02_2020-EX-10.7-CONSULTING AGREEMENT.PDF",
+          "y_true": "Medium",
+          "y_pred": "Low",
+          "n_present_labels": 1
+        },
+        {
+          "filename": "AgapeAtpCorp_20191202_10-KA_EX-10.1_11911128_EX-10.1_Supply Agreement.pdf",
+          "y_true": "High",
+          "y_pred": "Low",
+          "n_present_labels": 1
+        },
+        {
+          "filename": "BIOAMBERINC_04_10_2013-EX-10.34-DEVELOPMENT AGREEMENT - First Amendment.pdf",
+          "y_true": "Low",
+          "y_pred": "Low",
+          "n_present_labels": 1
+        },
+        {
+          "filename": "BLUEHILLSBANCORP,INC_05_20_2014-EX-1.1-AGENCY AGREEMENT.PDF",
+          "y_true": "Medium",
+          "y_pred": "Low",
+          "n_present_labels": 1
+        },
+        {
+          "filename": "BUFFALOWILDWINGSINC_06_05_1998-EX-10.3-FRANCHISE AGREEMENT.PDF",
+          "y_true": "High",
+          "y_pred": "Low",
+          "n_present_labels": 1
+        },
+        {
+          "filename": "BellringBrandsInc_20190920_S-1_EX-10.12_11817081_EX-10.12_Manufacturing Agreement3.pdf",
+          "y_true": "Low",
+          "y_pred": "Low",
+          "n_present_labels": 1
+        },
+        {
+          "filename": "BizzingoInc_20120322_8-K_EX-10.17_7504499_EX-10.17_Endorsement Agreement.pdf",
+          "y_true": "High",
+          "y_pred": "Low",
+          "n_present_labels": 1
+        },
+        {
+          "filename": "CENTRACKINTERNATIONALINC_10_29_1999-EX-10.3-WEB SITE HOSTING AGREEMENT.PDF",
+          "y_true": "Medium",
+          "y_pred": "Low",
+          "n_present_labels": 1
+        },
+        {
+          "filename": "COOLTECHNOLOGIES,INC_10_25_2017-EX-10.71-Strategic Alliance Agreement.PDF",
+          "y_true": "Medium",
+          "y_pred": "Low",
+          "n_present_labels": 1
+        },
+        {
+          "filename": "CURAEGISTECHNOLOGIES,INC_05_26_2010-EX-1-CORPORATE SPONSORSHIP AGREEMENT.PDF",
+          "y_true": "Medium",
+          "y_pred": "Low",
+          "n_present_labels": 1
+        },
+        {
+          "filename": "CerenceInc_20191002_8-K_EX-10.4_11827494_EX-10.4_Intellectual Property Agreement.pdf",
+          "y_true": "High",
+          "y_pred": "Low",
+          "n_present_labels": 1
+        },
+        {
+          "filename": "DUOSTECHNOLOGIESGROUP,INC_04_21_2009-EX-10.1-STRATEGIC ALLIANCE AGREEMENT.PDF",
+          "y_true": "High",
+          "y_pred": "Low",
+          "n_present_labels": 1
+        },
+        {
+          "filename": "ENTERTAINMENTGAMINGASIAINC_02_15_2005-EX-10.5-DISTRIBUTOR AGREEMENT.PDF",
+          "y_true": "High",
+          "y_pred": "Low",
+          "n_present_labels": 1
+        },
+        {
+          "filename": "FOUNDATIONMEDICINE,INC_02_02_2015-EX-10.2-Collaboration Agreement.PDF",
+          "y_true": "High",
+          "y_pred": "Low",
+          "n_present_labels": 1
+        },
+        {
+          "filename": "GRIDIRONBIONUTRIENTS,INC_02_05_2020-EX-10.3-SUPPLY AGREEMENT.PDF",
+          "y_true": "Low",
+          "y_pred": "Low",
+          "n_present_labels": 1
+        },
+        {
+          "filename": "GSITECHNOLOGYINC_11_16_2009-EX-10.2-INTELLECTUAL PROPERTY AGREEMENT between SONY ELECTRONICS INC. and GSI TECHNOLOGY, INC..PDF",
+          "y_true": "Low",
+          "y_pred": "Low",
+          "n_present_labels": 1
+        },
+        {
+          "filename": "GluMobileInc_20070319_S-1A_EX-10.09_436630_EX-10.09_Content License Agreement2.pdf",
+          "y_true": "High",
+          "y_pred": "Low",
+          "n_present_labels": 1
+        },
+        {
+          "filename": "IGENEBIOTECHNOLOGYINC_05_13_2003-EX-1-JOINT VENTURE AGREEMENT.PDF",
+          "y_true": "Medium",
+          "y_pred": "Low",
+          "n_present_labels": 1
+        },
+        {
+          "filename": "IMAGEWARESYSTEMSINC_12_20_1999-EX-10.22-MAINTENANCE AGREEMENT.PDF",
+          "y_true": "High",
+          "y_pred": "Low",
+          "n_present_labels": 1
+        },
+        {
+          "filename": "INTERSECTENT,INC_05_11_2020-EX-10.1-SUPPLY AGREEMENT.PDF",
+          "y_true": "Medium",
+          "y_pred": "Low",
+          "n_present_labels": 1
+        },
+        {
+          "filename": "IOVANCEBIOTHERAPEUTICS,INC_08_03_2017-EX-10.1-STRATEGIC ALLIANCE AGREEMENT.PDF",
+          "y_true": "High",
+          "y_pred": "Low",
+          "n_present_labels": 1
+        },
+        {
+          "filename": "IdeanomicsInc_20160330_10-K_EX-10.26_9512211_EX-10.26_Content License Agreement.pdf",
+          "y_true": "High",
+          "y_pred": "Low",
+          "n_present_labels": 1
+        },
+        {
+          "filename": "LIGHTBRIDGECORP_11_23_2015-EX-10.26-STRATEGIC ALLIANCE AGREEMENT.PDF",
+          "y_true": "Low",
+          "y_pred": "Low",
+          "n_present_labels": 1
+        },
+        {
+          "filename": "LIMEENERGYCO_09_09_1999-EX-10-DISTRIBUTOR AGREEMENT.PDF",
+          "y_true": "High",
+          "y_pred": "Low",
+          "n_present_labels": 1
+        },
+        {
+          "filename": "MERITLIFEINSURANCECO_06_19_2020-EX-10.(XIV)-MASTER SERVICES AGREEMENT.PDF",
+          "y_true": "High",
+          "y_pred": "Low",
+          "n_present_labels": 1
+        },
+        {
+          "filename": "MSCIINC_02_28_2008-EX-10.10-.PDF",
+          "y_true": "Medium",
+          "y_pred": "Low",
+          "n_present_labels": 1
+        },
+        {
+          "filename": "ON2TECHNOLOGIES,INC_11_17_2006-EX-10.3-SUPPORT AND MAINTENANCE AGREEMENT.PDF",
+          "y_true": "Low",
+          "y_pred": "Low",
+          "n_present_labels": 1
+        },
+        {
+          "filename": "OPERALTD_04_30_2020-EX-4.14-SERVICE AGREEMENT.PDF",
+          "y_true": "Medium",
+          "y_pred": "Low",
+          "n_present_labels": 1
+        },
+        {
+          "filename": "PACIFICSYSTEMSCONTROLTECHNOLOGYINC_08_24_2000-EX-10.53-SPONSORSHIP AGREEMENT.PDF",
+          "y_true": "Low",
+          "y_pred": "Low",
+          "n_present_labels": 1
+        },
+        {
+          "filename": "PROFOUNDMEDICALCORP_08_29_2019-EX-4.5-SUPPLY AGREEMENT.PDF",
+          "y_true": "High",
+          "y_pred": "Low",
+          "n_present_labels": 1
+        },
+        {
+          "filename": "PacificapEntertainmentHoldingsInc_20051115_8-KA_EX-1.01_4300894_EX-1.01_Content License Agreement.pdf",
+          "y_true": "High",
+          "y_pred": "Low",
+          "n_present_labels": 1
+        },
+        {
+          "filename": "PareteumCorp_20081001_8-K_EX-99.1_2654808_EX-99.1_Hosting Agreement.pdf",
+          "y_true": "High",
+          "y_pred": "Low",
+          "n_present_labels": 1
+        },
+        {
+          "filename": "Principal Life Insurance Company - Broker Dealer Marketing and Servicing Agreement .PDF",
+          "y_true": "Medium",
+          "y_pred": "Low",
+          "n_present_labels": 1
+        },
+        {
+          "filename": "Quaker Chemical Corporation - NON COMPETITION AND NON SOLICITATION AGREEMENT.PDF",
+          "y_true": "Medium",
+          "y_pred": "Low",
+          "n_present_labels": 1
+        },
+        {
+          "filename": "QuantumGroupIncFl_20090120_8-K_EX-99.2_3672910_EX-99.2_Hosting Agreement.pdf",
+          "y_true": "High",
+          "y_pred": "Low",
+          "n_present_labels": 1
+        },
+        {
+          "filename": "Reinsurance Group of America, Incorporated - A&R REMARKETING  AGREEMENT.PDF",
+          "y_true": "Medium",
+          "y_pred": "Low",
+          "n_present_labels": 1
+        },
+        {
+          "filename": "SOLUTIONSVENDINGINTERNATIONAL,INC_03_31_2020-EX1A-1 UNDR AGMT-SERVICES AGREEMENT.PDF",
+          "y_true": "Low",
+          "y_pred": "Low",
+          "n_present_labels": 1
+        },
+        {
+          "filename": "STAMPSCOMINC_06_24_1999-EX-10.18-SPONSORSHIP AGREEMENT.PDF",
+          "y_true": "High",
+          "y_pred": "Low",
+          "n_present_labels": 1
+        },
+        {
+          "filename": "SalesforcecomInc_20171122_10-Q_EX-10.1_10961535_EX-10.1_Reseller Agreement.pdf",
+          "y_true": "Low",
+          "y_pred": "Low",
+          "n_present_labels": 1
+        },
+        {
+          "filename": "SmartRxSystemsInc_20180914_1-A_EX1A-6 MAT CTRCT_11351705_EX1A-6 MAT CTRCT_Distributor Agreement.pdf",
+          "y_true": "High",
+          "y_pred": "Low",
+          "n_present_labels": 1
+        },
+        {
+          "filename": "TALLGRASSENERGY,LP_02_20_2020-EX-99.26-JOINT FILING AGREEMENT.PDF",
+          "y_true": "Low",
+          "y_pred": "Low",
+          "n_present_labels": 1
+        },
+        {
+          "filename": "TRANSPHORM,INC_02_14_2020-EX-10.12(1)-JOINT VENTURE AGREEMENT.PDF",
+          "y_true": "Low",
+          "y_pred": "Low",
+          "n_present_labels": 1
+        },
+        {
+          "filename": "TheglobeComInc_19990503_S-1A_EX-10.20_5416126_EX-10.20_Co-Branding Agreement.pdf",
+          "y_true": "High",
+          "y_pred": "Low",
+          "n_present_labels": 1
+        },
+        {
+          "filename": "ThriventVariableInsuranceAccountB_20190701_N-6_EX-99.D(IV)_11720968_EX-99.D(IV)_Endorsement Agreement.pdf",
+          "y_true": "Low",
+          "y_pred": "Low",
+          "n_present_labels": 1
+        },
+        {
+          "filename": "TomOnlineInc_20060501_20-F_EX-4.46_749700_EX-4.46_Co-Branding Agreement.pdf",
+          "y_true": "High",
+          "y_pred": "Low",
+          "n_present_labels": 1
+        },
+        {
+          "filename": "VIRGINGALACTICHOLDINGS,INC_04_08_2020-EX-99.1-JOINT FILING STATEMENT.PDF",
+          "y_true": "Low",
+          "y_pred": "Low",
+          "n_present_labels": 1
+        },
+        {
+          "filename": "VIVINT SOLAR, INC. - NON-COMPETITION AGREEMENT.PDF",
+          "y_true": "Low",
+          "y_pred": "Low",
+          "n_present_labels": 1
+        },
+        {
+          "filename": "VirtuosoSurgicalInc_20191227_1-A_EX1A-6 MAT CTRCT_11933379_EX1A-6 MAT CTRCT_License Agreement.pdf",
+          "y_true": "High",
+          "y_pred": "Low",
+          "n_present_labels": 1
+        },
+        {
+          "filename": "XpresspaGroupInc_20190401_10-K_EX-10.28_11599457_EX-10.28_Marketing Agreement.pdf",
+          "y_true": "High",
+          "y_pred": "Low",
+          "n_present_labels": 1
+        },
+        {
+          "filename": "ZEBRATECHNOLOGIESCORP_04_16_2014-EX-10.1-INTELLECTUAL PROPERTY AGREEMENT.PDF",
+          "y_true": "Medium",
+          "y_pred": "Low",
+          "n_present_labels": 1
+        }
+      ]
+    }
+  ]
+}

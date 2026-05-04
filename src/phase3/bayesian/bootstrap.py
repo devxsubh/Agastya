@@ -20,7 +20,8 @@ def build_seed_model():
 def ensure_seed_model(path: str = "results/phase3/bayesian_network.pkl") -> str:
     out = Path(path)
     out.parent.mkdir(parents=True, exist_ok=True)
-    if not out.exists():
-        save_model(build_seed_model(), str(out))
+    # Always rebuild so CPT edits are immediately reflected and no stale
+    # pickled BN survives between runs.
+    save_model(build_seed_model(), str(out))
     return str(out)
 

@@ -24,3 +24,10 @@ results/phase3/models/*.pt
 results/phase3/models/*.npz
 results/phase3/*.pkl
 results/phase3/*.npz
+
+# LaTeX build artifacts for phase3 experiment report
+reports/phase3/EXPERIMENT_REPORT.aux
+reports/phase3/EXPERIMENT_REPORT.out
+reports/phase3/EXPERIMENT_REPORT.log
+reports/phase3/EXPERIMENT_REPORT.pdf
+reports/phase3/EXPERIMENT_REPORT.synctex.gz
