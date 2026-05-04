@@ -1,1 +1,12 @@
-{"macro_f1": 0.7463207023622066, "accuracy": 0.8236173393124065, "val_loss": 18.683537900447845}
+{
+  "test_macro_f1": 0.7586199555419356,
+  "test_accuracy": 0.8261562998405104,
+  "val_macro_f1_best": 0.7456587553645686,
+  "macro_f1": 0.7586199555419356,
+  "accuracy": 0.8261562998405104,
+  "notes": "macro_f1/accuracy mirror test when available, else val best only.",
+  "model_name": "nlpaueb/legal-bert-base-uncased",
+  "lora_r": 32,
+  "lora_alpha": 64,
+  "epochs_ran": 25
+}
