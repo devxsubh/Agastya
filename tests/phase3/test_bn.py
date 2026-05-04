@@ -88,6 +88,7 @@ def test_em_training_changes_cpd_and_persists_model(tmp_path):
         train_csv_path=str(train_csv),
         output_model_path=str(out_model),
         n_iter=5,
+        use_seed_cpt=False,
     )
     assert trained.check_model() is True
     assert Path(out_model).exists()
