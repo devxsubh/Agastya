@@ -15,14 +15,11 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt
 
-# Download Spacy model
-RUN python -m spacy download en_core_web_sm
-
 # Copy the rest of the application
 COPY . .
 
 # Set PYTHONPATH
 ENV PYTHONPATH=/app
 
-# Default command (can be overridden)
-CMD ["python", "src/phase3/hybrid_eval_cli.py", "--reasoner", "rf"]
+# Default command for web deployment (Render/Web Service)
+CMD ["sh", "-c", "uvicorn app.api:app --host 0.0.0.0 --port ${PORT:-10000}"]
