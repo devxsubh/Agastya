@@ -1,6 +1,11 @@
 # Agastya
 
-**Agastya** is a research system for **automated contract risk classification**: turning long-form legal agreements into structured risk signals using a three-phase neuro-symbolic pipeline. Given a contract PDF or text, Agastya identifies which clause types are present (Legal-BERT) and reasons over them to classify the contract as **Low / Medium / High** risk (Random Forest).
+**Agastya** is our end-to-end research and engineering attempt to automate **contract risk classification** from long legal documents.
+Given a contract PDF or text, Agastya:
+1. detects clause categories across 41 CUAD labels, and
+2. infers a contract-level risk class (**Low / Medium / High**) with evidence-backed outputs.
+
+This repository is not just the final model. It documents our full journey: what we planned, what failed, what we debugged, what we changed, and why the current architecture is what it is.
 
 ## Pipeline Overview
 
@@ -23,11 +28,15 @@ Contract Text / PDF
 
 ## Contents
 
-- [Results](#results)
+- [What We Set Out To Build](#what-we-set-out-to-build)
+- [Research Journey and Process](#research-journey-and-process)
+- [Experiments We Ran](#experiments-we-ran)
+- [Hurdles, Failures, and Fixes](#hurdles-failures-and-fixes)
+- [Final Results](#final-results)
 - [Architecture](#architecture)
 - [Folder Structure](#folder-structure)
 - [Quickstart](#quickstart)
-- [Notebooks](#notebooks)
+- [Notebooks and Reproducibility Workflow](#notebooks-and-reproducibility-workflow)
 - [Reproducible Setup](#reproducible-setup)
 - [Development Practices](#development-practices)
 - [Team](#team)
@@ -35,9 +44,158 @@ Contract Text / PDF
 
 ---
 
-## Results
+## What We Set Out To Build
 
-All metrics are loaded from artifact files — never hardcoded. Run `python3 src/phase3/hybrid_eval_cli.py` to regenerate.
+Our objective was to build a **research-grade but deployable** system for legal contract risk assessment that:
+
+- handles real-world long contracts (including scanned PDFs),
+- does not collapse under class imbalance,
+- provides interpretable contract-level reasoning,
+- avoids demo-only shortcuts (hardcoded metrics, silent fallbacks, hidden assumptions),
+- and can be rerun by another researcher with minimal ambiguity.
+
+We treated Agastya as a phased research program rather than a one-shot model training exercise.
+
+---
+
+## Research Journey and Process
+
+### Phase 1 (Classical Baseline): Establish a Strong, Explainable Reference
+
+We started with a strict classical-ML baseline (TF-IDF + LinearSVC) to answer:
+
+- How much legal signal is recoverable from surface lexical patterns alone?
+- What does the imbalance profile look like per CUAD label?
+- What should be considered an acceptable transformer gain later?
+
+This gave us a stable benchmark and a clean sanity anchor for later deep learning experiments.
+
+### Phase 2 (Legal-BERT): Improve Clause Detection Under Real Contract Lengths
+
+Once the baseline stabilized, we moved to Legal-BERT with LoRA adapters for efficient fine-tuning.  
+Core work in this phase was not only model training but **data/path plumbing**:
+
+- long-document segmentation into <=512-token chunks,
+- OCR fallback for non-machine-readable PDFs,
+- label map stability across train/infer/eval,
+- and artifact discipline so downstream phases could consume outputs reliably.
+
+### Phase 3 (Neuro-Symbolic Risk Reasoning): Convert Clause Signals into Risk Decisions
+
+The major challenge in Phase 3 was that accurate clause classification is necessary but not sufficient: we needed reliable contract-level reasoning.
+
+We first attempted a Bayesian Network (our original neuro-symbolic intent), then replaced it with a data-driven Random Forest reasoner after ablation exposed structural limits in BN for this setting.
+
+### Productization Layer
+
+After modeling stabilized, we aligned the research pipeline with usage:
+
+- web UI for upload -> analysis,
+- strict artifact loading (no fake outputs if model files are missing),
+- CLI evaluation to regenerate reports from current artifacts,
+- notebook sequence that mirrors the research storyline and can be rerun.
+
+---
+
+## Experiments We Ran
+
+### 1) Classical ML experiments (Phase 1)
+
+- TF-IDF feature space variants (word and character n-grams).
+- LinearSVC with `class_weight="balanced"` to address skewed clause distribution.
+- Macro-F1 selected as primary metric due to minority-class sensitivity.
+
+Outcome: established a hard-to-beat baseline and identified where transformer improvements mattered vs where they were marginal.
+
+### 2) Legal-BERT experiments (Phase 2)
+
+- Domain model selection: `nlpaueb/legal-bert-base-uncased`.
+- LoRA-based fine-tuning to keep training efficient.
+- Loss weighting and optimizer tuning (AdamW).
+- Segment aggregation behavior for long contracts.
+
+Outcome: improved macro-F1 and better minority label behavior than Phase 1, while keeping an efficient training path.
+
+### 3) Risk reasoning experiments (Phase 3)
+
+- **v1 (failed):** Bayesian Network with hand-curated structure/CPT assumptions.
+- **v2 (final):** Random Forest trained on all 41 clause features (+ SMOTE + calibration).
+- Thresholding study for BERT -> RF handoff confidence floor.
+- Binary vs frequency-count feature vectorization for clause evidence.
+
+Outcome: RF materially outperformed BN and avoided the manual-CPT bottleneck.
+
+### 4) Ablation and interpretability experiments
+
+- Phase 1 vs Phase 2 vs Phase 3 performance comparison.
+- BN retained for controlled ablation, not production inference.
+- RF feature-importance study for explanation surfaces.
+- Oracle analysis: RF with ground-truth clauses to estimate upper bound.
+
+Outcome: remaining live-system gap was traced primarily to upstream clause extraction noise, not RF reasoning capacity.
+
+---
+
+## Hurdles, Failures, and Fixes
+
+### Hurdle 1: Bayesian Network underperformed drastically
+
+**Problem**
+- BN required manually specified Conditional Probability Tables for complex legal interactions.
+- Only a small evidence subset was effectively used, causing large information loss.
+- EM optimization on imbalanced data collapsed predictions toward dominant classes.
+
+**What we saw**
+- Macro-F1 collapsed to `0.159`.
+- `Medium` risk class effectively disappeared in predictions.
+
+**Fix**
+- Replaced BN with Random Forest using all 41 clause features.
+- Added class-balancing and calibration in the RF pipeline.
+- Kept BN artifacts only as historical ablation evidence.
+
+### Hurdle 2: Long contract handling and OCR variability
+
+**Problem**
+- Real contracts were inconsistent: some digitally extractable, others scanned or noisy.
+- Single-pass tokenization was insufficient for long legal documents.
+
+**Fix**
+- Tiered text extraction (`pdfplumber` then EasyOCR fallback).
+- Segment-based processing to preserve long-document coverage.
+- Unified preprocessing path so training and inference remain aligned.
+
+### Hurdle 3: Artifact drift and silent mismatch risks
+
+**Problem**
+- In multi-phase pipelines, stale model files or label maps can produce invalid predictions without obvious crashes.
+
+**Fix**
+- Strict artifact loading with explicit failure (`FileNotFoundError`) instead of fallback behavior.
+- Metric reporting wired directly to artifact outputs, never static README constants.
+- Dedicated eval CLI to regenerate report files deterministically.
+
+### Hurdle 4: Class imbalance and threshold sensitivity
+
+**Problem**
+- Rare clause and risk classes were volatile under default settings.
+- Naive confidence cutoffs introduced either over-triggering or under-reporting.
+
+**Fix**
+- Weighted training in Phase 2.
+- SMOTE + calibration in Phase 3 RF.
+- Confidence floor optimization (selected `0.11`) based on empirical trade-offs.
+
+---
+
+## Final Results
+
+All metrics are loaded from artifacts (not hardcoded prose values).  
+Regenerate hybrid metrics with:
+
+```bash
+python3 src/phase3/hybrid_eval_cli.py
+```
 
 ### Phase Progression
 
@@ -48,13 +206,12 @@ All metrics are loaded from artifact files — never hardcoded. Run `python3 src
 | Phase 3 v1 ❌ | Legal-BERT + Bayesian Network | Contract risk (Low/Med/High) | 0.159 | — |
 | **Phase 3 v2 ✅** | **Legal-BERT + Random Forest** | **Contract risk (Low/Med/High)** | **0.866** | **0.882** |
 
-Phase 2 / Hybrid figures mirror `results/phase2/results.json` and `reports/phase3/hybrid_eval.json`; retrain Legal-BERT then rerun `python3 src/phase3/hybrid_eval_cli.py` to refresh.
-
-> **Why did the Bayesian Network fail?** The BN required hand-coded Conditional Probability Tables encoding legal domain knowledge. With only 5 evidence nodes for 41 CUAD labels, 80% of the BERT signal was discarded before reasoning. EM training on the imbalanced dataset then collapsed the `Medium` class entirely (all predictions → High). The RF replaced the BN as the reasoning layer and learns clause interaction weights from data.
+Phase 2 and Hybrid numbers mirror `results/phase2/results.json` and `reports/phase3/hybrid_eval.json`.
 
 ### RF Oracle (Upper Bound)
 
-When given **ground-truth** clause labels (bypassing BERT extraction errors), the RF achieves **Macro-F1 = 0.903**. The gap between that oracle and live hybrid Macro-F1 (see `hybrid_eval.json`) shrinks as the Phase 2 encoder improves — remaining gap is largely Phase 2 clause noise feeding the RF.
+When RF is fed **ground-truth clause labels** (instead of predicted Phase 2 outputs), it reaches **Macro-F1 = 0.903**.  
+This indicates the current ceiling is mostly constrained by upstream clause extraction noise, not downstream RF capacity.
 
 ---
 
@@ -62,37 +219,37 @@ When given **ground-truth** clause labels (bypassing BERT extraction errors), th
 
 ### Phase 1 — Classical ML Baseline
 
-| Component | Choice | Rationale |
-|-----------|--------|-----------|
-| Features | TF-IDF (word + character n-grams) | Strong legal surface form baseline; sparse and inspectable |
-| Model | LinearSVC (`class_weight="balanced"`) | Phase 1 mandate: scikit-learn only, no deep learning |
-| Evaluation | Macro-F1 (primary) | Handles severe class imbalance across 41 clause categories |
+| Component | Choice | Why this choice |
+|-----------|--------|-----------------|
+| Features | TF-IDF (word + character n-grams) | High-signal legal lexical baseline; sparse + inspectable |
+| Model | LinearSVC (`class_weight="balanced"`) | Strong linear baseline under class imbalance |
+| Eval objective | Macro-F1 | Prevent dominance by frequent labels |
 
 ### Phase 2 — Legal-BERT Clause Classifier
 
-| Component | Choice | Rationale |
-|-----------|--------|-----------|
-| Backbone | `nlpaueb/legal-bert-base-uncased` | Domain-specific pre-training for legal text |
-| Fine-tuning | LoRA adapters | Parameter-efficient; preserves frozen BERT weights |
-| Segmentation | Segment-based extraction (≤512 tokens) | Handles long contracts across multiple passes |
-| Training | PyTorch + HuggingFace, AdamW, weighted loss | Standardized pipeline for transformer fine-tuning |
+| Component | Choice | Why this choice |
+|-----------|--------|-----------------|
+| Backbone | `nlpaueb/legal-bert-base-uncased` | Domain-pretrained legal encoder |
+| Fine-tuning | LoRA adapters | Parameter-efficient adaptation |
+| Segmentation | Segment extraction (<=512 tokens) | Long-contract compatibility |
+| Training | PyTorch + HuggingFace + weighted loss | Stable and reproducible tuning stack |
 
-### Phase 3 — Hybrid Neuro-Symbolic Pipeline
+### Phase 3 — Hybrid Neuro-Symbolic Reasoning
 
-| Component | Choice | Rationale |
-|-----------|--------|-----------|
-| Feature extraction | Frozen Legal-BERT (Phase 2 adapter) | Converts clause text → 41-dim presence signals |
-| Reasoner | Calibrated Random Forest (41 CUAD labels, SMOTE) | Data-driven over all labels; no manual CPT specification |
-| Confidence floor | 0.11 (mathematically optimized) | Optimal signal-to-noise threshold for BERT → RF handoff |
-| Feature vector | Clause frequency counts (not binary) | Preserves how many times each clause type appears |
-| OCR ingestion | Tiered extractor (`pdfplumber` → EasyOCR fallback) | Supports both digital and scanned PDFs |
-| Delivery surface | Streamlit app (`app/streamlit_app.py`) | Interactive upload-to-risk-analysis with traceable outputs |
+| Component | Choice | Why this choice |
+|-----------|--------|-----------------|
+| Upstream evidence | Frozen Legal-BERT outputs | Reuses strongest clause detector |
+| Reasoner | Calibrated Random Forest (+ SMOTE) | Learns clause interactions from data, no manual CPTs |
+| Confidence floor | 0.11 | Best observed precision-recall trade-off for evidence handoff |
+| Feature vector | Clause frequency counts | Keeps occurrence intensity, not just presence/absence |
+| OCR ingestion | `pdfplumber` -> EasyOCR fallback | Handles digital and scanned contracts |
+| Delivery | Web UI | Usable interface for non-ML users |
 
-### Key Design Decisions
+### Non-Negotiable Design Decisions
 
-- **No dummy fallbacks**: If Phase 2 artifacts are missing, the pipeline raises `FileNotFoundError` — no silent degradation to random or heuristic outputs.
-- **No hardcoded metrics**: All displayed numbers are read from `results/phase*/results.json` and `reports/phase3/hybrid_eval.json` at runtime.
-- **BN retained for ablation**: `results/phase3/bayesian_network_seed.pkl` is preserved for Notebook 10 ablation analysis only. It is never used in the live prediction path.
+- **No silent fallback models:** Missing artifacts should fail loudly.
+- **No hardcoded reported metrics:** Reports always read generated files.
+- **Historical BN retained only for analysis:** It is excluded from the live inference path.
 
 ---
 
@@ -101,48 +258,50 @@ When given **ground-truth** clause labels (bypassing BERT extraction errors), th
 ```
 agastya/
 ├── app/
-│   └── streamlit_app.py          # Interactive risk analysis UI
-├── configs/                       # YAML defaults (model, training, data)
+│   ├── api.py                           # FastAPI backend for web UI inference
+│   ├── README.md                        # How to run backend + frontend
+│   └── web/                             # React + Vite frontend
+├── configs/                             # YAML defaults (model, training, data)
 ├── data/
-│   ├── CUAD_v1/                   # Phase 1 copy (master_clauses.csv, JSON)
-│   ├── raw/                       # Scanned PDFs and raw CUAD
-│   ├── interim/                   # OCR outputs, segmented clauses
-│   └── processed/                 # train.csv / val.csv / test.csv
+│   ├── CUAD_v1/                         # Phase 1 copy (master_clauses.csv, JSON)
+│   ├── raw/                             # Scanned PDFs and raw CUAD
+│   ├── interim/                         # OCR outputs, segmented clauses
+│   └── processed/                       # train.csv / val.csv / test.csv
 ├── notebooks/
-│   ├── Phase_1/                   # Part_01 … Part_05 (classical ML)
-│   ├── Phase_2/                   # 01 … 09 (OCR → BERT → evaluation)
-│   └── Phase_3/                   # 10 … 13 (hybrid pipeline)
+│   ├── Phase_1/                         # Part_01 ... Part_05 (classical ML)
+│   ├── Phase_2/                         # 01 ... 09 (OCR -> BERT -> eval)
+│   └── Phase_3/                         # 10 ... 13 (hybrid pipeline + ablations)
 │       ├── 10_bn_structure_and_cpts.ipynb     # BN ablation (historical)
 │       ├── 11_hybrid_pipeline_demo.ipynb      # End-to-end demo
-│       ├── 12_ablation_study.ipynb            # ML vs DL vs Hybrid comparison
+│       ├── 12_ablation_study.ipynb            # ML vs DL vs Hybrid
 │       └── 13_interpretability_report.ipynb   # RF feature importances
 ├── reports/
 │   └── phase3/
-│       ├── hybrid_eval.json       # Live eval results (backend=rf)
+│       ├── hybrid_eval.json             # Live eval results (RF backend)
 │       ├── phase_progression_summary.csv
 │       ├── ablation_results.csv
-│       └── figures/               # rf_feature_importance.png, etc.
+│       └── figures/                     # rf_feature_importance.png, etc.
 ├── results/
-│   ├── phase1/results.json        # Phase 1 SVM metrics
+│   ├── phase1/results.json              # Phase 1 metrics
 │   ├── phase2/
-│   │   ├── results.json           # Phase 2 BERT metrics
-│   │   ├── label2id.json          # 41-label CUAD map (required for RF)
-│   │   └── models/                # legal_bert_phase2.pt, LoRA adapter
+│   │   ├── results.json                 # Phase 2 metrics
+│   │   ├── label2id.json                # 41-label CUAD map
+│   │   └── models/                      # legal_bert_phase2.pt, LoRA adapter
 │   └── phase3/
-│       ├── rf_reasoner.pkl        # Trained RF (41 labels, SMOTE, calibrated)
-│       └── bayesian_network_seed.pkl  # BN ablation artifact only
+│       ├── rf_reasoner.pkl              # Trained RF reasoner
+│       └── bayesian_network_seed.pkl    # BN ablation artifact only
 ├── src/
-│   ├── phase2/                    # OCR, segmentation, BERT training, evaluation
+│   ├── phase2/                          # OCR, segmentation, BERT training, eval
 │   └── phase3/
-│       ├── hybrid_pipeline.py     # AgastyaHybridPipeline (BERT → RF)
-│       ├── hybrid_eval.py         # Batch evaluation logic
-│       ├── hybrid_eval_cli.py     # CLI: regenerates hybrid_eval.json
-│       ├── rf_reasoner.py         # RF training, inference, importances
-│       ├── ablation.py            # Ablation table builder
-│       ├── interface/             # phase2_adapter, evidence_encoder, etc.
-│       └── bayesian/              # BN code (ablation only)
-├── scripts/                       # train.py, evaluate.py, run_ocr.py
-├── tests/                         # pytest suite
+│       ├── hybrid_pipeline.py           # AgastyaHybridPipeline (BERT -> RF)
+│       ├── hybrid_eval.py               # Batch evaluation
+│       ├── hybrid_eval_cli.py           # Regenerates hybrid_eval.json
+│       ├── rf_reasoner.py               # RF training and inference
+│       ├── ablation.py                  # Ablation table builder
+│       ├── interface/                   # phase2 adapter, evidence encoder, etc.
+│       └── bayesian/                    # BN code (analysis only)
+├── scripts/
+├── tests/
 ├── Dockerfile
 ├── requirements.txt
 └── README.md
@@ -152,18 +311,36 @@ agastya/
 
 ## Quickstart
 
-### Run the Streamlit App
+### Use the Web UI
+
+Upload a contract PDF in the web UI to get:
+- risk class (Low/Medium/High),
+- clause-level evidence used for inference,
+- and feature-driven explainability outputs.
+
+Run full web stack from project root:
 
 ```bash
-streamlit run app/streamlit_app.py
+# Terminal 1 - backend API
+uvicorn app.api:app --reload --host 0.0.0.0 --port 8000
+
+# Terminal 2 - frontend
+cd app/web
+npm install
+npm run dev
 ```
 
-Upload any contract PDF and get a risk classification with clause-level evidence.
+Optional frontend API override:
+
+```bash
+cd app/web
+VITE_API_URL=http://localhost:8000 npm run dev
+```
 
 ### Regenerate Phase 3 Evaluation Metrics
 
 ```bash
-# From project root — overwrites reports/phase3/hybrid_eval.json
+# From project root - overwrites reports/phase3/hybrid_eval.json
 python3 src/phase3/hybrid_eval_cli.py
 ```
 
@@ -197,24 +374,25 @@ pytest tests/ -v
 
 ---
 
-## Notebooks
+## Notebooks and Reproducibility Workflow
 
-All Phase 3 notebooks use a **path bootstrap** (Cell 1) that resolves `PROJECT_ROOT` from any working directory — no manual path adjustment needed.
+All Phase 3 notebooks start with a path bootstrap cell that resolves `PROJECT_ROOT` so they can be launched from any working directory.
 
 | Notebook | Purpose | Key Output |
 |----------|---------|------------|
-| `Phase_1/Part_01` – `Part_05` | Classical ML baselines | SVM Macro-F1 = 0.719 |
-| `Phase_2/01` – `09` | Legal-BERT fine-tuning and evaluation | Clause Macro-F1 ≈ 0.759 (see `results/phase2/results.json`) |
-| `Phase_3/10_bn_structure_and_cpts` | **[Ablation]** Why BN failed | CPT collapse visualizations |
-| `Phase_3/11_hybrid_pipeline_demo` | End-to-end demo on a real contract | Live risk classification |
-| `Phase_3/12_ablation_study` | Phase 1 vs 2 vs 3 comparison | Reads all metrics from artifact files |
-| `Phase_3/13_interpretability_report` | RF feature importances + BN ablation | `rf_feature_importance.png` |
+| `Phase_1/Part_01` - `Part_05` | Classical ML baseline development | SVM baseline metrics |
+| `Phase_2/01` - `09` | OCR, segmentation, Legal-BERT training + eval | Phase 2 clause metrics |
+| `Phase_3/10_bn_structure_and_cpts` | BN failure analysis (ablation) | CPT/structure diagnostics |
+| `Phase_3/11_hybrid_pipeline_demo` | End-to-end hybrid demo | Live contract risk prediction |
+| `Phase_3/12_ablation_study` | Cross-phase performance comparison | Consolidated ablation table |
+| `Phase_3/13_interpretability_report` | RF explainability + comparisons | `rf_feature_importance.png` |
 
-**Run order for Phase 3:**
-1. Notebook 11 (requires Phase 2 artifacts to be present)
-2. Notebook 12 (reads from `hybrid_eval.json` — run CLI first)
-3. Notebook 13 (reads from `rf_reasoner.pkl`)
-4. Notebook 10 (standalone BN ablation — no dependency on RF)
+Recommended Phase 3 execution order:
+1. Notebook 11 (end-to-end sanity).
+2. `python3 src/phase3/hybrid_eval_cli.py`.
+3. Notebook 12 (ablation reads fresh report artifacts).
+4. Notebook 13 (interpretability from current RF artifact).
+5. Notebook 10 (historical BN analysis, independent of RF path).
 
 ---
 
@@ -223,7 +401,7 @@ All Phase 3 notebooks use a **path bootstrap** (Cell 1) that resolves `PROJECT_R
 **Prerequisites**
 
 - Python 3.10+
-- Poppler (for PDF rasterization in OCR fallback):
+- Poppler for PDF rasterization in OCR fallback:
   - macOS: `brew install poppler`
   - Ubuntu/Debian: `sudo apt install poppler-utils`
 
@@ -240,18 +418,25 @@ pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
-**Data:** CUAD v1 is included under `data/CUAD_v1/`. Phase 3 processed splits (`train.csv`, `val.csv`, `test.csv`) are generated by the Phase 2 segmentation pipeline. If starting fresh, run the Phase 2 preprocessing notebooks first.
+**Data**
 
-**Determinism:** All training uses `random_state=42`. Re-run notebooks top-to-bottom after pulling changes.
+CUAD v1 is included under `data/CUAD_v1/`.  
+Phase 3 processed splits (`train.csv`, `val.csv`, `test.csv`) come from the Phase 2 preprocessing/segmentation flow.
+
+**Determinism**
+
+Training uses fixed seeds (`random_state=42` where applicable).  
+For full reproducibility after pulling updates, rerun notebooks top-to-bottom and regenerate reports via CLI.
 
 ---
 
 ## Development Practices
 
-- **Commits:** Small, coherent commits with clear messages ([Conventional Commits](https://www.conventionalcommits.org/)).
-- **No patchwork metrics:** All evaluation numbers are computed live from model artifacts. No hardcoded fallback values.
-- **Phase boundaries:** Phase 1 — no transformers. Phase 2 — BERT fine-tuning, no contract-level reasoning. Phase 3 — hybrid neuro-symbolic pipeline.
-- **Housekeeping:** `.venv/`, Jupyter checkpoints, and large model binaries are gitignored.
+- **Small coherent commits:** keep history reviewable and hypothesis-driven.
+- **No patchwork metrics:** all reported values come from artifacts generated by code.
+- **Strict phase boundaries:** baseline -> encoder -> reasoner, each with explicit scope.
+- **Fail loudly over failing silently:** missing artifacts should break fast.
+- **Repository hygiene:** `.venv/`, checkpoints, and bulky binaries are excluded.
 
 ---
 
@@ -264,4 +449,5 @@ pip install -r requirements.txt
 
 ## Acknowledgments
 
-Analysis uses the **Contract Understanding Atticus Dataset (CUAD)**. Cite the dataset and license terms from the [official CUAD release](https://www.atticusprojectai.org/cuad) when publishing or redistributing.
+This work uses the **Contract Understanding Atticus Dataset (CUAD)**.  
+Please cite CUAD and follow license/distribution constraints from the [official release](https://www.atticusprojectai.org/cuad).
