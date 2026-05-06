@@ -68,6 +68,7 @@ _PHASE2_TO_PHASE3 = {
 _TOP_K = 3
 # Minimum per-class probability to include in top-K output
 _TOP_K_FLOOR = 0.08
+_PREDICT_TEXT_CAP = 600
 
 
 logger = logging.getLogger(__name__)
@@ -182,12 +183,11 @@ class Phase2BertAdapter:
             clause_type = _map_phase2_to_phase3(phase2_label)
             results.append(
                 {
-                    "clause_text": clause_text,
+                    # Keep response payload compact for web inference.
+                    "clause_text": clause_text[:_PREDICT_TEXT_CAP],
                     "clause_type": clause_type,
                     "confidence": conf,
                     "embedding": cls_embedding,
-                    "risk_indicators": [],
-                    "logits": logits.cpu().numpy(),
                     "phase2_label": phase2_label,
                 }
             )
@@ -197,12 +197,10 @@ class Phase2BertAdapter:
             top_idx = int(torch.argmax(probs).item())
             results.append(
                 {
-                    "clause_text": clause_text,
+                    "clause_text": clause_text[:_PREDICT_TEXT_CAP],
                     "clause_type": _map_phase2_to_phase3(self.id2label[top_idx]),
                     "confidence": float(probs[top_idx].item()),
                     "embedding": cls_embedding,
-                    "risk_indicators": [],
-                    "logits": logits.cpu().numpy(),
                     "phase2_label": self.id2label[top_idx],
                 }
             )

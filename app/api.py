@@ -18,6 +18,8 @@ from pydantic import BaseModel, Field
 MAX_CONTRACT_PREVIEW_CHARS = 24_000
 MAX_CLAUSE_CLASSIFY_CHARS = 8_000
 BERT_DETAIL_TEXT_CHARS = 2_000
+MAX_UPLOAD_BYTES = int(os.getenv("MAX_UPLOAD_BYTES", str(12 * 1024 * 1024)))
+MAX_INFER_TEXT_CHARS = int(os.getenv("MAX_INFER_TEXT_CHARS", "220000"))
 
 # Allow imports from project root
 PROJECT_ROOT = next(
@@ -125,6 +127,11 @@ async def analyze(file: UploadFile = File(...)) -> AnalysisResponse:
         raise HTTPException(status_code=400, detail="Only PDF and TXT files are supported")
 
     content = await file.read()
+    if len(content) > MAX_UPLOAD_BYTES:
+        raise HTTPException(
+            status_code=413,
+            detail=f"File too large. Max allowed is {MAX_UPLOAD_BYTES // (1024 * 1024)} MB.",
+        )
 
     try:
         if suffix == ".pdf":
@@ -138,6 +145,14 @@ async def analyze(file: UploadFile = File(...)) -> AnalysisResponse:
         raise HTTPException(status_code=422, detail="No text could be extracted from the file")
 
     stripped = text.strip()
+    if len(stripped) > MAX_INFER_TEXT_CHARS:
+        raise HTTPException(
+            status_code=413,
+            detail=(
+                "Extracted contract text is too large for synchronous inference. "
+                f"Current limit: {MAX_INFER_TEXT_CHARS} chars."
+            ),
+        )
     contract_truncated = len(stripped) > MAX_CONTRACT_PREVIEW_CHARS
     preview = stripped[:MAX_CONTRACT_PREVIEW_CHARS]
 
@@ -186,6 +201,7 @@ async def analyze(file: UploadFile = File(...)) -> AnalysisResponse:
         contract_truncated=contract_truncated,
         segment_annotations=segment_annotations,
     )
+
 
 
 @app.post("/classify-clause", response_model=ClassifyClauseResponse)

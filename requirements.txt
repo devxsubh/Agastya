@@ -49,3 +49,6 @@ shap>=0.44.0
 # --- Phase 3 (hybrid reasoning + OCR) ---
 pdf2image==1.17.0
 easyocr==1.7.1
+
+# --- Testing / CI ---
+pytest>=7.4.0

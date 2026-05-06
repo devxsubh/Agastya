@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from io import BytesIO
 from pathlib import Path
+import os
 import re
 from typing import BinaryIO
 
@@ -22,6 +23,7 @@ except Exception:  # pragma: no cover - optional runtime dependency in CI
     convert_from_bytes = None
 
 _OCR_READER = None
+_MAX_OCR_PAGES = int(os.getenv("MAX_OCR_PAGES", "60"))
 
 
 def _get_reader():
@@ -72,9 +74,19 @@ def _extract_digital_pdf(raw_bytes: bytes) -> str:
 def _extract_pdf_ocr(raw_bytes: bytes) -> str:
     if convert_from_bytes is None:
         raise RuntimeError("pdf2image is not installed. Install phase-3 dependencies first.")
-    images = convert_from_bytes(raw_bytes)
     reader = _get_reader()
-    chunks = [" ".join(reader.readtext(np.array(img), detail=0)) for img in images]
+    try:
+        with pdfplumber.open(BytesIO(raw_bytes)) as pdf:
+            total_pages = len(pdf.pages)
+    except Exception:
+        total_pages = _MAX_OCR_PAGES
+    page_cap = min(total_pages, _MAX_OCR_PAGES)
+    chunks = []
+    for page_idx in range(1, page_cap + 1):
+        images = convert_from_bytes(raw_bytes, first_page=page_idx, last_page=page_idx)
+        if not images:
+            continue
+        chunks.append(" ".join(reader.readtext(np.array(images[0]), detail=0)))
     return "\n".join(chunks)
 
 

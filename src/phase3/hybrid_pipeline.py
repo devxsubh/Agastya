@@ -22,6 +22,7 @@ import bisect
 import json
 import logging
 import math
+import os
 from pathlib import Path
 from typing import Callable
 
@@ -173,7 +174,8 @@ def _flatten_bert_outputs(raw: list) -> list[dict]:
     return flat
 
 
-_SEGMENT_ANNOTATION_TEXT_CAP = 3500
+_SEGMENT_ANNOTATION_TEXT_CAP = int(os.getenv("SEGMENT_ANNOTATION_TEXT_CAP", "800"))
+_MAX_SEGMENTS_FOR_INFERENCE = int(os.getenv("MAX_SEGMENTS_FOR_INFERENCE", "280"))
 
 
 def _heuristic_clause_risk(cuad_label: str) -> str:
@@ -511,6 +513,8 @@ class AgastyaHybridPipeline:
     # ---- Main entry ----------------------------------------------------------
 
     def _predict_from_clauses(self, clauses: list[str]) -> dict:
+        if len(clauses) > _MAX_SEGMENTS_FOR_INFERENCE:
+            clauses = clauses[:_MAX_SEGMENTS_FOR_INFERENCE]
         raw_outputs = [self.bert.predict(clause) for clause in clauses]
         bert_outputs = _flatten_bert_outputs(raw_outputs)
         segment_annotations = _build_segment_annotations(clauses, raw_outputs)
