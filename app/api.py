@@ -31,6 +31,7 @@ if PROJECT_ROOT and str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from src.phase3.hybrid_pipeline import AgastyaHybridPipeline
+from src.phase3.interface.phase2_adapter import describe_phase2_artifact_gaps
 from src.phase3.ocr.extractor import extract_text
 from src.phase3.rf_reasoner import get_feature_importances, load_rf_reasoner
 
@@ -48,15 +49,71 @@ _pipeline: AgastyaHybridPipeline | None = None
 _feature_importances: list[dict] | None = None
 
 
+def _require_project_root() -> Path:
+    if PROJECT_ROOT is None:
+        raise RuntimeError("Could not resolve project root (expected parent of src/).")
+    return PROJECT_ROOT
+
+
+def _repo_path(env_var: str, relative_default: str) -> str:
+    """Absolute path: env overrides default under project root."""
+    root = _require_project_root()
+    raw = os.getenv(env_var)
+    if raw is None or not str(raw).strip():
+        return str((root / relative_default).resolve())
+    p = Path(str(raw).strip())
+    return str(p.resolve() if p.is_absolute() else (root / p).resolve())
+
+
+def _repo_path_optional(env_var: str, relative_default: str) -> str | None:
+    """Like _repo_path, but if env is set to empty string, return None."""
+    root = _require_project_root()
+    if env_var not in os.environ:
+        return str((root / relative_default).resolve())
+    raw = os.getenv(env_var, "").strip()
+    if raw == "":
+        return None
+    p = Path(raw)
+    return str(p.resolve() if p.is_absolute() else (root / p).resolve())
+
+
+def _artifact_paths() -> tuple[str, str | None, str | None, str]:
+    """Resolved RF path, label map, optional adapter dir, optional merged BERT ckpt."""
+    rf_path = _repo_path("AGASTYA_RF_MODEL_PATH", "results/phase3/rf_reasoner.pkl")
+    label_map = _repo_path("AGASTYA_PHASE2_LABEL_MAP", "results/phase2/label2id.json")
+    adapter = _repo_path_optional("AGASTYA_PHASE2_ADAPTER_PATH", "results/phase2/models/legal_bert_lora_adapter")
+    ckpt = _repo_path_optional("AGASTYA_PHASE2_BERT_CHECKPOINT", "results/phase2/models/legal_bert_phase2.pt")
+    return rf_path, label_map, adapter, ckpt
+
+
+def _ensure_inference_artifacts_or_raise() -> tuple[str, str | None, str | None, str]:
+    rf_path, label_map, adapter, ckpt = _artifact_paths()
+    errors = describe_phase2_artifact_gaps(ckpt, label_map, adapter)
+    if not Path(rf_path).exists():
+        errors.append(
+            f"RF reasoner missing: {rf_path}. Set AGASTYA_RF_MODEL_PATH or add results/phase3/rf_reasoner.pkl."
+        )
+    if errors:
+        raise HTTPException(
+            status_code=503,
+            detail={
+                "error": "Inference artifacts missing or incomplete.",
+                "hints": errors,
+            },
+        )
+    return rf_path, label_map, adapter, ckpt
+
+
 def _get_pipeline() -> AgastyaHybridPipeline:
     global _pipeline
     if _pipeline is None:
+        rf_path, label_map, adapter, ckpt = _ensure_inference_artifacts_or_raise()
         _pipeline = AgastyaHybridPipeline(
-            rf_model_path=str(PROJECT_ROOT / "results/phase3/rf_reasoner.pkl"),
+            rf_model_path=rf_path,
             bn_model_path=None,
-            bert_checkpoint_path=str(PROJECT_ROOT / "results/phase2/models/legal_bert_phase2.pt"),
-            label_map_path=str(PROJECT_ROOT / "results/phase2/label2id.json"),
-            adapter_path=str(PROJECT_ROOT / "results/phase2/models/legal_bert_lora_adapter"),
+            bert_checkpoint_path=ckpt,
+            label_map_path=label_map,
+            adapter_path=adapter,
         )
     return _pipeline
 
@@ -64,7 +121,8 @@ def _get_pipeline() -> AgastyaHybridPipeline:
 def _get_feature_importances() -> list[dict]:
     global _feature_importances
     if _feature_importances is None:
-        reasoner = load_rf_reasoner(str(PROJECT_ROOT / "results/phase3/rf_reasoner.pkl"))
+        rf_path, _, _, _ = _ensure_inference_artifacts_or_raise()
+        reasoner = load_rf_reasoner(rf_path)
         fi_df = get_feature_importances(reasoner)
         _feature_importances = fi_df.to_dict(orient="records")
     return _feature_importances
@@ -114,7 +172,24 @@ class ClassifyClauseResponse(BaseModel):
 
 @app.get("/health")
 def health() -> dict:
-    return {"status": "ok", "model": "Legal-BERT + RF (Hybrid v2)"}
+    try:
+        rf_path, label_map, adapter, ckpt = _artifact_paths()
+        gaps = describe_phase2_artifact_gaps(ckpt, label_map, adapter)
+        rf_ok = Path(rf_path).exists()
+        ready = not gaps and rf_ok
+        return {
+            "status": "ok" if ready else "degraded",
+            "model": "Legal-BERT + RF (Hybrid v2)",
+            "artifacts_ready": ready,
+            "paths": {
+                "rf_reasoner": rf_path,
+                "phase2_label_map": label_map,
+                "phase2_adapter": adapter,
+                "phase2_checkpoint": ckpt,
+            },
+        }
+    except Exception:
+        return {"status": "error", "model": "Legal-BERT + RF (Hybrid v2)", "artifacts_ready": False}
 
 
 @app.post("/analyze", response_model=AnalysisResponse)
@@ -159,6 +234,8 @@ async def analyze(file: UploadFile = File(...)) -> AnalysisResponse:
     try:
         pipeline = _get_pipeline()
         result = pipeline.predict(text)
+    except HTTPException:
+        raise
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Pipeline error: {exc}") from exc
 
@@ -213,6 +290,8 @@ def classify_clause(body: ClassifyClauseBody) -> ClassifyClauseResponse:
     try:
         pipeline = _get_pipeline()
         preds = pipeline.bert.predict(raw)
+    except HTTPException:
+        raise
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Classifier error: {exc}") from exc
 

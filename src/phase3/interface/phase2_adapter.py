@@ -231,3 +231,24 @@ def has_phase2_artifacts(
     if checkpoint_path and Path(checkpoint_path).exists():
         return True
     return False
+
+
+def describe_phase2_artifact_gaps(
+    checkpoint_path: str | None,
+    label_map_path: str,
+    adapter_path: str | None,
+) -> list[str]:
+    """Human-readable deployment hints when Phase 2 files are absent."""
+    gaps: list[str] = []
+    if not Path(label_map_path).exists():
+        gaps.append(f"Label map missing: {label_map_path}")
+    has_adapter = bool(adapter_path and Path(adapter_path).exists())
+    has_ckpt = bool(checkpoint_path and Path(checkpoint_path).exists())
+    if not has_adapter and not has_ckpt:
+        gaps.append(
+            "Legal-BERT weights missing: need the LoRA adapter directory and/or merged "
+            f".pt checkpoint (looked for adapter={adapter_path!r}, checkpoint={checkpoint_path!r}). "
+            "These files are usually gitignored — upload them on the host or set "
+            "AGASTYA_PHASE2_LABEL_MAP, AGASTYA_PHASE2_ADAPTER_PATH, AGASTYA_PHASE2_BERT_CHECKPOINT."
+        )
+    return gaps
